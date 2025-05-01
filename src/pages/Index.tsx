@@ -5,27 +5,30 @@ import CalorieCard from '@/components/CalorieCard';
 import FoodItem from '@/components/FoodItem';
 import AddFoodForm from '@/components/AddFoodForm';
 import MacroSummary from '@/components/MacroSummary';
-import { Camera, PieChart, ScrollText, Search } from 'lucide-react';
+import { Camera, PieChart, ScrollText, Search, Info } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 interface Food {
   id: number;
   name: string;
   calories: number;
+  weight: number;
   time: string;
 }
 
 const Index = () => {
+  const { toast } = useToast();
   const [foods, setFoods] = useState<Food[]>([
-    { id: 1, name: 'Huevos revueltos', calories: 210, time: '08:30 AM' },
-    { id: 2, name: 'Manzana', calories: 95, time: '10:15 AM' },
-    { id: 3, name: 'Ensalada de pollo', calories: 350, time: '01:30 PM' },
+    { id: 1, name: 'Huevos revueltos', calories: 210, weight: 140, time: '08:30 AM' },
+    { id: 2, name: 'Manzana', calories: 95, weight: 182, time: '10:15 AM' },
+    { id: 3, name: 'Ensalada de pollo', calories: 350, weight: 250, time: '01:30 PM' },
   ]);
 
   const dailyCalorieGoal = 2000;
   const consumedCalories = foods.reduce((total, food) => total + food.calories, 0);
   const remainingCalories = dailyCalorieGoal - consumedCalories;
 
-  const handleAddFood = (food: { name: string, calories: number }) => {
+  const handleAddFood = (food: { name: string, calories: number, weight: number }) => {
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
@@ -35,13 +38,52 @@ const Index = () => {
         id: Date.now(),
         name: food.name,
         calories: food.calories,
+        weight: food.weight,
         time: timeString,
       }
     ]);
+
+    toast({
+      title: "Alimento añadido",
+      description: `${food.name} (${food.calories} kcal) ha sido añadido`,
+    });
   };
 
   const handleDeleteFood = (id: number) => {
     setFoods(foods.filter(food => food.id !== id));
+    
+    toast({
+      title: "Alimento eliminado",
+      description: "El alimento ha sido eliminado de tu lista",
+    });
+  };
+
+  const handlePhotoCapture = () => {
+    toast({
+      title: "Función en desarrollo",
+      description: "La función de captura de fotos estará disponible próximamente",
+    });
+  };
+
+  const handleSearch = () => {
+    toast({
+      title: "Función en desarrollo",
+      description: "La búsqueda avanzada estará disponible próximamente",
+    });
+  };
+
+  const handleFoodList = () => {
+    toast({
+      title: "Lista de alimentos",
+      description: "Próximamente podrás ver la lista completa de alimentos disponibles",
+    });
+  };
+
+  const handleStats = () => {
+    toast({
+      title: "Estadísticas",
+      description: "Próximamente podrás ver estadísticas detalladas de tu consumo",
+    });
   };
 
   return (
@@ -69,19 +111,31 @@ const Index = () => {
           <div className="md:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-border">
             <h3 className="font-medium mb-4">Métodos de registro rápido</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <button className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors">
+              <button 
+                className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+                onClick={handlePhotoCapture}
+              >
                 <Camera className="h-6 w-6 mb-2" />
                 <span className="text-sm">Tomar foto</span>
               </button>
-              <button className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors">
+              <button 
+                className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+                onClick={handleSearch}
+              >
                 <Search className="h-6 w-6 mb-2" />
                 <span className="text-sm">Buscar</span>
               </button>
-              <button className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors">
+              <button 
+                className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+                onClick={handleFoodList}
+              >
                 <ScrollText className="h-6 w-6 mb-2" />
                 <span className="text-sm">Lista de alimentos</span>
               </button>
-              <button className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors">
+              <button 
+                className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+                onClick={handleStats}
+              >
                 <PieChart className="h-6 w-6 mb-2" />
                 <span className="text-sm">Estadísticas</span>
               </button>
@@ -94,15 +148,23 @@ const Index = () => {
             <h3 className="font-medium mb-2">Alimentos de hoy</h3>
           </div>
           <div className="max-h-80 overflow-y-auto">
-            {foods.map((food) => (
-              <FoodItem 
-                key={food.id}
-                name={food.name}
-                calories={food.calories}
-                time={food.time}
-                onDelete={() => handleDeleteFood(food.id)}
-              />
-            ))}
+            {foods.length > 0 ? (
+              foods.map((food) => (
+                <FoodItem 
+                  key={food.id}
+                  name={food.name}
+                  calories={food.calories}
+                  weight={food.weight}
+                  time={food.time}
+                  onDelete={() => handleDeleteFood(food.id)}
+                />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+                <Info className="h-8 w-8 mb-2" />
+                <p>No hay alimentos registrados hoy</p>
+              </div>
+            )}
           </div>
         </div>
         

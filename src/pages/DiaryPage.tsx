@@ -1,14 +1,17 @@
 
 import React, { useState } from 'react';
 import AppNavbar from '@/components/AppNavbar';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import FoodItem from '@/components/FoodItem';
 import AddFoodForm from '@/components/AddFoodForm';
+import { Button } from '@/components/ui/button';
+import { useToast } from "@/hooks/use-toast";
 
 interface MealFood {
   id: number;
   name: string;
   calories: number;
+  weight: number;
 }
 
 interface Meal {
@@ -17,34 +20,35 @@ interface Meal {
 }
 
 const DiaryPage = () => {
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   
   const [meals, setMeals] = useState<Meal[]>([
     {
       name: 'Desayuno',
       foods: [
-        { id: 1, name: 'Huevos revueltos', calories: 210 },
-        { id: 2, name: 'Pan tostado', calories: 80 },
+        { id: 1, name: 'Huevos revueltos', calories: 210, weight: 140 },
+        { id: 2, name: 'Pan tostado', calories: 80, weight: 30 },
       ],
     },
     {
       name: 'Almuerzo',
       foods: [
-        { id: 3, name: 'Ensalada de pollo', calories: 350 },
-        { id: 4, name: 'Manzana', calories: 95 },
+        { id: 3, name: 'Ensalada de pollo', calories: 350, weight: 250 },
+        { id: 4, name: 'Manzana', calories: 95, weight: 182 },
       ],
     },
     {
       name: 'Cena',
       foods: [
-        { id: 5, name: 'Salmón a la plancha', calories: 280 },
-        { id: 6, name: 'Verduras al vapor', calories: 120 },
+        { id: 5, name: 'Salmón a la plancha', calories: 280, weight: 170 },
+        { id: 6, name: 'Verduras al vapor', calories: 120, weight: 250 },
       ],
     },
     {
       name: 'Snacks',
       foods: [
-        { id: 7, name: 'Yogurt griego', calories: 150 },
+        { id: 7, name: 'Yogurt griego', calories: 150, weight: 200 },
       ],
     },
   ]);
@@ -53,12 +57,22 @@ const DiaryPage = () => {
     const prevDay = new Date(currentDate);
     prevDay.setDate(currentDate.getDate() - 1);
     setCurrentDate(prevDay);
+    
+    toast({
+      title: "Día cambiado",
+      description: `Viendo el diario para ${formatDate(prevDay)}`,
+    });
   };
 
   const handleNextDay = () => {
     const nextDay = new Date(currentDate);
     nextDay.setDate(currentDate.getDate() + 1);
     setCurrentDate(nextDay);
+    
+    toast({
+      title: "Día cambiado",
+      description: `Viendo el diario para ${formatDate(nextDay)}`,
+    });
   };
 
   const formatDate = (date: Date) => {
@@ -76,16 +90,27 @@ const DiaryPage = () => {
       (food) => food.id !== foodId
     );
     setMeals(updatedMeals);
+    
+    toast({
+      title: "Alimento eliminado",
+      description: "El alimento ha sido eliminado de tu diario",
+    });
   };
 
-  const handleAddFood = (mealIndex: number, food: { name: string; calories: number }) => {
+  const handleAddFood = (mealIndex: number, food: { name: string; calories: number; weight: number }) => {
     const updatedMeals = [...meals];
     updatedMeals[mealIndex].foods.push({
       id: Date.now(),
       name: food.name,
       calories: food.calories,
+      weight: food.weight,
     });
     setMeals(updatedMeals);
+    
+    toast({
+      title: "Alimento añadido",
+      description: `${food.name} (${food.calories} kcal) ha sido añadido a ${meals[mealIndex].name}`,
+    });
   };
 
   const totalCalories = meals.reduce(
@@ -108,24 +133,33 @@ const DiaryPage = () => {
           </div>
           
           <div className="flex items-center space-x-2">
-            <button 
+            <Button 
+              variant="ghost" 
+              size="icon" 
               onClick={handlePreviousDay}
-              className="p-2 rounded-full hover:bg-accent"
             >
               <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={() => setCurrentDate(new Date())}
-              className="py-1 px-3 text-sm rounded-md border border-border hover:bg-accent"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCurrentDate(new Date());
+                toast({ 
+                  title: "Fecha actualizada", 
+                  description: "Mostrando el diario de hoy" 
+                });
+              }}
             >
               Hoy
-            </button>
-            <button 
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
               onClick={handleNextDay}
-              className="p-2 rounded-full hover:bg-accent"
             >
               <ChevronRight size={20} />
-            </button>
+            </Button>
           </div>
         </div>
         
@@ -154,13 +188,15 @@ const DiaryPage = () => {
                       key={food.id}
                       name={food.name}
                       calories={food.calories}
+                      weight={food.weight}
                       onDelete={() => handleDeleteFood(mealIndex, food.id)}
                     />
                   ))}
                 </div>
               ) : (
-                <div className="p-4 text-center text-muted-foreground">
-                  No hay alimentos registrados
+                <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+                  <Info className="h-6 w-6 mb-2" />
+                  <p>No hay alimentos registrados</p>
                 </div>
               )}
               

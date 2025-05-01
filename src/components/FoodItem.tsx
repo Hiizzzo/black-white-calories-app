@@ -5,11 +5,12 @@ import { Trash2 } from 'lucide-react';
 interface FoodItemProps {
   name: string;
   calories: number;
+  weight?: number;
   time?: string;
   onDelete?: () => void;
 }
 
-const FoodItem = ({ name, calories, time, onDelete }: FoodItemProps) => {
+const FoodItem = ({ name, calories, weight, time, onDelete }: FoodItemProps) => {
   return (
     <div className="flex justify-between items-center p-3 border-b border-border hover:bg-accent/50 transition-colors">
       <div className="flex flex-col">
@@ -17,7 +18,10 @@ const FoodItem = ({ name, calories, time, onDelete }: FoodItemProps) => {
         {time && <span className="text-xs text-muted-foreground">{time}</span>}
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium">{calories} kcal</span>
+        <div className="text-right">
+          <span className="text-sm font-medium">{calories} kcal</span>
+          {weight && <div className="text-xs text-muted-foreground">{weight}g</div>}
+        </div>
         {onDelete && (
           <button 
             onClick={onDelete} 

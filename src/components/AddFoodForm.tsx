@@ -1,25 +1,43 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { calculateCalories, findFoodByName } from '@/utils/foodDatabase';
 
 interface AddFoodFormProps {
-  onAddFood: (food: { name: string, calories: number }) => void;
+  onAddFood: (food: { name: string, calories: number, weight: number }) => void;
 }
 
 const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
   const [name, setName] = useState('');
-  const [calories, setCalories] = useState('');
+  const [weight, setWeight] = useState('');
+  const [calculatedCalories, setCalculatedCalories] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isFoodFound, setIsFoodFound] = useState(false);
+
+  useEffect(() => {
+    if (name && weight) {
+      const calories = calculateCalories(name, Number(weight));
+      setCalculatedCalories(calories);
+      setIsFoodFound(!!calories);
+    } else {
+      setCalculatedCalories(null);
+      setIsFoodFound(false);
+    }
+  }, [name, weight]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && Number(calories) > 0) {
+    if (name.trim() && Number(weight) > 0 && calculatedCalories !== null) {
       onAddFood({
-        name: name.trim(),
-        calories: Number(calories),
+        name: findFoodByName(name)?.name || name.trim(),
+        calories: calculatedCalories,
+        weight: Number(weight),
       });
       setName('');
-      setCalories('');
+      setWeight('');
+      setCalculatedCalories(null);
       setIsExpanded(false);
     }
   };
@@ -41,45 +59,59 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
               <label htmlFor="food-name" className="block text-sm font-medium mb-1">
                 Alimento
               </label>
-              <input
+              <Input
                 id="food-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full p-2 border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full"
                 placeholder="Ej: Manzana"
                 required
               />
+              {name && !isFoodFound && weight && (
+                <p className="text-xs text-destructive mt-1">
+                  Alimento no encontrado en la base de datos
+                </p>
+              )}
             </div>
             <div>
-              <label htmlFor="food-calories" className="block text-sm font-medium mb-1">
-                Calorías
+              <label htmlFor="food-weight" className="block text-sm font-medium mb-1">
+                Peso (g)
               </label>
-              <input
-                id="food-calories"
+              <Input
+                id="food-weight"
                 type="number"
-                value={calories}
-                onChange={(e) => setCalories(e.target.value)}
-                className="w-full p-2 border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Ej: 95"
-                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                className="w-full"
+                placeholder="Ej: 100"
+                min="1"
                 required
               />
             </div>
+            
+            {calculatedCalories !== null && isFoodFound && (
+              <div className="bg-accent/50 p-2 rounded-md text-sm">
+                Calorías calculadas: <strong>{calculatedCalories} kcal</strong>
+              </div>
+            )}
+            
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setIsExpanded(false)}
-                className="flex-1 py-2 px-4 border border-border rounded-lg hover:bg-accent transition-colors"
+                className="flex-1"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="flex-1 py-2 px-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                disabled={!isFoodFound}
+                className="flex-1"
               >
                 Guardar
-              </button>
+              </Button>
             </div>
           </div>
         </form>
