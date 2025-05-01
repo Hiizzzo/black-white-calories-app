@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
@@ -79,11 +78,15 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
               </label>
               <div className="flex items-center gap-3">
                 {name && (
-                  <Avatar className="h-10 w-10 border border-border">
+                  <Avatar className="h-10 w-10 border-2 border-black bg-white rounded-full overflow-hidden">
                     {currentFood?.imageUrl ? (
-                      <AvatarImage src={currentFood.imageUrl} alt={currentFood.name} />
+                      <AvatarImage 
+                        src={currentFood.imageUrl} 
+                        alt={currentFood.name}
+                        className="grayscale contrast-125 brightness-110 p-0.5"
+                      />
                     ) : (
-                      <AvatarFallback>{nameInitial}</AvatarFallback>
+                      <AvatarFallback className="bg-white text-black font-bold">{nameInitial}</AvatarFallback>
                     )}
                   </Avatar>
                 )}
