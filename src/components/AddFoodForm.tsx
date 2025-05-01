@@ -4,9 +4,10 @@ import { Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { calculateCalories, findFoodByName } from '@/utils/foodDatabase';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface AddFoodFormProps {
-  onAddFood: (food: { name: string, calories: number, weight: number }) => void;
+  onAddFood: (food: { name: string, calories: number, weight: number, imageUrl?: string }) => void;
 }
 
 const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
@@ -15,13 +16,23 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
   const [calculatedCalories, setCalculatedCalories] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFoodFound, setIsFoodFound] = useState(false);
+  const [currentFood, setCurrentFood] = useState<{ name: string; imageUrl?: string } | null>(null);
 
   useEffect(() => {
-    if (name && weight) {
-      const calories = calculateCalories(name, Number(weight));
-      setCalculatedCalories(calories);
-      setIsFoodFound(!!calories);
+    if (name) {
+      const foundFood = findFoodByName(name);
+      setCurrentFood(foundFood);
+      
+      if (foundFood && weight) {
+        const calories = calculateCalories(name, Number(weight));
+        setCalculatedCalories(calories);
+        setIsFoodFound(!!calories);
+      } else {
+        setCalculatedCalories(null);
+        setIsFoodFound(false);
+      }
     } else {
+      setCurrentFood(null);
       setCalculatedCalories(null);
       setIsFoodFound(false);
     }
@@ -30,17 +41,24 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && Number(weight) > 0 && calculatedCalories !== null) {
+      const foundFood = findFoodByName(name);
+      
       onAddFood({
-        name: findFoodByName(name)?.name || name.trim(),
+        name: foundFood?.name || name.trim(),
         calories: calculatedCalories,
         weight: Number(weight),
+        imageUrl: foundFood?.imageUrl
       });
+      
       setName('');
       setWeight('');
       setCalculatedCalories(null);
       setIsExpanded(false);
+      setCurrentFood(null);
     }
   };
+
+  const nameInitial = currentFood?.name.charAt(0).toUpperCase() || '';
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
@@ -59,15 +77,26 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
               <label htmlFor="food-name" className="block text-sm font-medium mb-1">
                 Alimento
               </label>
-              <Input
-                id="food-name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full"
-                placeholder="Ej: Manzana"
-                required
-              />
+              <div className="flex items-center gap-3">
+                {name && (
+                  <Avatar className="h-10 w-10 border border-border">
+                    {currentFood?.imageUrl ? (
+                      <AvatarImage src={currentFood.imageUrl} alt={currentFood.name} />
+                    ) : (
+                      <AvatarFallback>{nameInitial}</AvatarFallback>
+                    )}
+                  </Avatar>
+                )}
+                <Input
+                  id="food-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full"
+                  placeholder="Ej: Manzana"
+                  required
+                />
+              </div>
               {name && !isFoodFound && weight && (
                 <p className="text-xs text-destructive mt-1">
                   Alimento no encontrado en la base de datos

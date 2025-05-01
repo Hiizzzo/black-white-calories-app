@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface FoodItemProps {
   name: string;
@@ -8,14 +9,26 @@ interface FoodItemProps {
   weight?: number;
   time?: string;
   onDelete?: () => void;
+  imageUrl?: string;
 }
 
-const FoodItem = ({ name, calories, weight, time, onDelete }: FoodItemProps) => {
+const FoodItem = ({ name, calories, weight, time, onDelete, imageUrl }: FoodItemProps) => {
+  const nameInitial = name.charAt(0).toUpperCase();
+
   return (
     <div className="flex justify-between items-center p-3 border-b border-border hover:bg-accent/50 transition-colors">
-      <div className="flex flex-col">
-        <span className="font-medium">{name}</span>
-        {time && <span className="text-xs text-muted-foreground">{time}</span>}
+      <div className="flex items-center gap-3">
+        <Avatar className="h-10 w-10 border border-border">
+          {imageUrl ? (
+            <AvatarImage src={imageUrl} alt={name} />
+          ) : (
+            <AvatarFallback>{nameInitial}</AvatarFallback>
+          )}
+        </Avatar>
+        <div className="flex flex-col">
+          <span className="font-medium">{name}</span>
+          {time && <span className="text-xs text-muted-foreground">{time}</span>}
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <div className="text-right">

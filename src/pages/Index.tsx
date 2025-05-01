@@ -14,21 +14,22 @@ interface Food {
   calories: number;
   weight: number;
   time: string;
+  imageUrl?: string;
 }
 
 const Index = () => {
   const { toast } = useToast();
   const [foods, setFoods] = useState<Food[]>([
-    { id: 1, name: 'Huevos revueltos', calories: 210, weight: 140, time: '08:30 AM' },
-    { id: 2, name: 'Manzana', calories: 95, weight: 182, time: '10:15 AM' },
-    { id: 3, name: 'Ensalada de pollo', calories: 350, weight: 250, time: '01:30 PM' },
+    { id: 1, name: 'Huevos revueltos', calories: 210, weight: 140, time: '08:30 AM', imageUrl: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?q=80&w=100&auto=format' },
+    { id: 2, name: 'Manzana', calories: 95, weight: 182, time: '10:15 AM', imageUrl: 'https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?q=80&w=100&auto=format' },
+    { id: 3, name: 'Ensalada de pollo', calories: 350, weight: 250, time: '01:30 PM', imageUrl: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?q=80&w=100&auto=format' },
   ]);
 
   const dailyCalorieGoal = 2000;
   const consumedCalories = foods.reduce((total, food) => total + food.calories, 0);
   const remainingCalories = dailyCalorieGoal - consumedCalories;
 
-  const handleAddFood = (food: { name: string, calories: number, weight: number }) => {
+  const handleAddFood = (food: { name: string, calories: number, weight: number, imageUrl?: string }) => {
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
@@ -40,6 +41,7 @@ const Index = () => {
         calories: food.calories,
         weight: food.weight,
         time: timeString,
+        imageUrl: food.imageUrl,
       }
     ]);
 
@@ -156,6 +158,7 @@ const Index = () => {
                   calories={food.calories}
                   weight={food.weight}
                   time={food.time}
+                  imageUrl={food.imageUrl}
                   onDelete={() => handleDeleteFood(food.id)}
                 />
               ))
