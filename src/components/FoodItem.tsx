@@ -2,6 +2,7 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
 interface FoodItemProps {
   name: string;
   calories: number;
@@ -10,6 +11,7 @@ interface FoodItemProps {
   onDelete?: () => void;
   imageUrl?: string;
 }
+
 const FoodItem = ({
   name,
   calories,
@@ -19,14 +21,16 @@ const FoodItem = ({
   imageUrl
 }: FoodItemProps) => {
   const nameInitial = name.charAt(0).toUpperCase();
-  return <div className="flex justify-between items-center p-3 border-b border-border hover:bg-accent/50 transition-colors">
+  
+  return (
+    <div className="flex justify-between items-center p-3 border-b border-border hover:bg-accent/50 transition-colors">
       <div className="flex items-center gap-3">
-        <Avatar className="h-10 w-10 border-2 border-black bg-white rounded-full overflow-hidden">
+        <Avatar className="h-10 w-10 border-[3px] border-black bg-white rounded-full overflow-hidden shadow-[2px_2px_0px_#000]">
           {imageUrl ? 
             <AvatarImage 
               src={imageUrl} 
               alt={name} 
-              className="object-contain grayscale contrast-125 brightness-110 p-0.5" 
+              className="object-contain grayscale contrast-[1.5] brightness-110 p-0.5 transform-gpu hover:scale-110 transition-transform" 
             /> : 
             <AvatarFallback className="bg-white text-black font-bold">{nameInitial}</AvatarFallback>
           }
@@ -45,6 +49,8 @@ const FoodItem = ({
             <Trash2 size={16} />
           </button>}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default FoodItem;

@@ -78,12 +78,12 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
               </label>
               <div className="flex items-center gap-3">
                 {name && (
-                  <Avatar className="h-10 w-10 border-2 border-black bg-white rounded-full overflow-hidden">
+                  <Avatar className="h-10 w-10 border-[3px] border-black bg-white rounded-full overflow-hidden shadow-[2px_2px_0px_#000]">
                     {currentFood?.imageUrl ? (
                       <AvatarImage 
                         src={currentFood.imageUrl} 
                         alt={currentFood.name}
-                        className="grayscale contrast-125 brightness-110 p-0.5"
+                        className="grayscale contrast-[1.5] brightness-110 p-0.5 transform-gpu hover:scale-110 transition-transform"
                       />
                     ) : (
                       <AvatarFallback className="bg-white text-black font-bold">{nameInitial}</AvatarFallback>
