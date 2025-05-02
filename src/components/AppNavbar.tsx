@@ -29,7 +29,10 @@ const AppNavbar = () => {
   return (
     <nav 
       className={`fixed bottom-0 left-0 right-0 z-50 py-2 px-4 md:px-6 transition-all duration-200 bg-background
-        md:top-0 md:bottom-auto ${isScrolled ? 'md:shadow-md' : ''} ${isMobile ? 'shadow-[0_-2px_10px_rgba(0,0,0,0.1)]' : ''}`}
+        md:top-0 md:bottom-auto 
+        ${isScrolled ? 'md:shadow-md' : ''} 
+        ${isMobile ? 'shadow-[0_-2px_10px_rgba(0,0,0,0.1)]' : ''}
+        dark:bg-gray-900 dark:border-t dark:border-gray-800 dark:md:border-t-0 dark:md:border-b`}
     >
       <div className="flex justify-between items-center max-w-screen-lg mx-auto">
         <Link to="/" className="hidden md:flex items-center space-x-2">
@@ -41,8 +44,8 @@ const AppNavbar = () => {
             to="/" 
             className={`flex flex-col items-center p-2 md:flex-row md:p-0 ${
               isActive('/') 
-                ? 'text-black font-medium' 
-                : 'text-gray-500 hover:text-black'
+                ? 'text-primary font-medium dark:text-white' 
+                : 'text-muted-foreground hover:text-primary dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
             <Home className="h-5 w-5 mb-1 md:mr-2 md:mb-0" />
@@ -53,8 +56,8 @@ const AppNavbar = () => {
             to="/diary" 
             className={`flex flex-col items-center p-2 md:flex-row md:p-0 ${
               isActive('/diary') 
-                ? 'text-black font-medium' 
-                : 'text-gray-500 hover:text-black'
+                ? 'text-primary font-medium dark:text-white' 
+                : 'text-muted-foreground hover:text-primary dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
             <Calendar className="h-5 w-5 mb-1 md:mr-2 md:mb-0" />
@@ -65,8 +68,8 @@ const AppNavbar = () => {
             to="/profile" 
             className={`flex flex-col items-center p-2 md:flex-row md:p-0 ${
               isActive('/profile') 
-                ? 'text-black font-medium' 
-                : 'text-gray-500 hover:text-black'
+                ? 'text-primary font-medium dark:text-white' 
+                : 'text-muted-foreground hover:text-primary dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
             <User className="h-5 w-5 mb-1 md:mr-2 md:mb-0" />
@@ -75,7 +78,7 @@ const AppNavbar = () => {
         </div>
         
         <div className="hidden md:block">
-          <span className="text-xs bg-black text-white px-3 py-1 rounded-full">
+          <span className="text-xs bg-black text-white dark:bg-gray-700 px-3 py-1 rounded-full">
             Beta
           </span>
         </div>

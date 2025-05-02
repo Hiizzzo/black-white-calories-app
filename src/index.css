@@ -39,29 +39,30 @@
   }
 
   .dark {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 96%;
+    /* Android-inspired dark theme */
+    --background: 0 0% 13%; /* Dark gray background #212121 */
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 15%;
-    --card-foreground: 0 0% 96%;
+    --card: 0 0% 17%; /* Slightly lighter gray for cards #2B2B2B */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 15%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 0 0% 17%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 96%;
-    --primary-foreground: 0 0% 10%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 13%;
 
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 0 0% 22%; /* #383838 */
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 20%;
+    --muted: 0 0% 22%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 0 0% 25%;
-    --accent-foreground: 0 0% 96%;
+    --accent: 0 0% 25%; /* #404040 */
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 96%;
+    --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 25%;
     --input: 0 0% 25%;
@@ -81,7 +82,7 @@
 
 @layer components {
   .calorie-card {
-    @apply bg-white rounded-2xl p-6 shadow-sm border border-border flex flex-col gap-3;
+    @apply bg-white rounded-2xl p-6 shadow-sm border border-border flex flex-col gap-3 dark:bg-gray-800 dark:border-gray-700;
   }
   
   .calorie-value {
@@ -89,10 +90,10 @@
   }
   
   .progress-container {
-    @apply w-full h-2 bg-secondary rounded-full overflow-hidden;
+    @apply w-full h-2 bg-secondary rounded-full overflow-hidden dark:bg-gray-700;
   }
   
   .progress-bar {
-    @apply h-full bg-primary rounded-full;
+    @apply h-full bg-primary rounded-full dark:bg-gray-400;
   }
 }

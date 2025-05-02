@@ -5,6 +5,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   User, 
   Settings, 
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
   nickname: string;
@@ -38,7 +40,14 @@ interface Preferences {
   reminders: boolean;
 }
 
+const WEIGHT_GOALS = [
+  { value: 'Mantener peso', label: 'Mantener peso' },
+  { value: 'Bajar peso', label: 'Bajar peso' },
+  { value: 'Subir peso', label: 'Subir peso' },
+];
+
 const ProfilePage = () => {
+  const { toast } = useToast();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingGoals, setIsEditingGoals] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>({
@@ -66,17 +75,87 @@ const ProfilePage = () => {
     }
   });
   
-  const { watch } = form;
+  const { watch, setValue } = form;
   const watchedValues = watch();
   
   // Calculate goal progress
-  const calorieProgress = 100; // Mock progress - would come from actual tracking data
-  const proteinProgress = 100;
-  const carbsProgress = 100;
-  const fatProgress = 100;
+  const calorieProgress = 80; // Mock progress - would come from actual tracking data
+  const proteinProgress = 65;
+  const carbsProgress = 50;
+  const fatProgress = 90;
+
+  // Calculate recommended calorie intake based on personal data and goal
+  const calculateCalorieIntake = (age: number, weight: number, height: number, goal: string) => {
+    // Harris-Benedict formula for BMR calculation
+    const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    
+    // Adjust based on goal
+    let dailyCalories;
+    if (goal === 'Bajar peso') {
+      dailyCalories = Math.round(bmr * 0.85); // 15% deficit for weight loss
+    } else if (goal === 'Subir peso') {
+      dailyCalories = Math.round(bmr * 1.15); // 15% surplus for weight gain
+    } else {
+      dailyCalories = Math.round(bmr); // Maintenance
+    }
+    
+    // Calculate macros based on standard distributions
+    const protein = Math.round((dailyCalories * 0.25) / 4); // 25% protein, 4 kcal per gram
+    const fat = Math.round((dailyCalories * 0.3) / 9); // 30% fat, 9 kcal per gram
+    const carbs = Math.round((dailyCalories * 0.45) / 4); // 45% carbs, 4 kcal per gram
+    
+    return {
+      dailyCalories,
+      protein,
+      carbs,
+      fat
+    };
+  };
+
+  // Update macros when weight, height, age or goal changes
+  useEffect(() => {
+    const age = parseInt(watchedValues.age) || 25;
+    const weight = parseInt(watchedValues.weight) || 70;
+    const height = parseInt(watchedValues.height) || 170;
+    const goal = watchedValues.goal;
+    
+    const { dailyCalories, protein, carbs, fat } = calculateCalorieIntake(age, weight, height, goal);
+    
+    setValue('dailyCalories', dailyCalories.toString());
+    setValue('protein', protein.toString());
+    setValue('carbs', carbs.toString());
+    setValue('fat', fat.toString());
+  }, [watchedValues.age, watchedValues.weight, watchedValues.height, watchedValues.goal, setValue]);
+
+  // Load user profile from localStorage
+  useEffect(() => {
+    const storedProfile = localStorage.getItem('userProfile');
+    if (storedProfile) {
+      const profile = JSON.parse(storedProfile);
+      Object.keys(profile).forEach(key => {
+        if (key in form.getValues()) {
+          setValue(key as keyof UserProfile, profile[key]);
+        }
+      });
+    }
+    
+    const storedPreferences = localStorage.getItem('userPreferences');
+    if (storedPreferences) {
+      const prefs = JSON.parse(storedPreferences);
+      setPreferences(prefs);
+      if (prefs.darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [setValue]);
 
   const toggleDarkMode = (checked: boolean) => {
-    setPreferences({...preferences, darkMode: checked});
+    const newPreferences = {...preferences, darkMode: checked};
+    setPreferences(newPreferences);
+    localStorage.setItem('userPreferences', JSON.stringify(newPreferences));
+    
     if (checked) {
       document.documentElement.classList.add('dark');
     } else {
@@ -84,33 +163,80 @@ const ProfilePage = () => {
     }
   };
   
-  // Apply dark mode on initial load
-  useEffect(() => {
-    if (preferences.darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [preferences.darkMode]);
-  
   const saveProfile = (data: UserProfile) => {
+    // Save profile data to localStorage
+    const profileData = {
+      nickname: data.nickname,
+      email: data.email,
+      age: data.age,
+      height: data.height,
+      weight: data.weight,
+      goal: data.goal
+    };
+    
+    localStorage.setItem('userProfile', JSON.stringify(profileData));
     console.log('Profile data saved:', data);
+    
+    toast({
+      title: "Perfil actualizado",
+      description: "Tus datos personales han sido actualizados",
+    });
+    
     setIsEditingProfile(false);
   };
   
   const saveGoals = (data: UserProfile) => {
+    // Save goals data to localStorage
+    const goalsData = {
+      dailyCalories: data.dailyCalories,
+      protein: data.protein,
+      carbs: data.carbs,
+      fat: data.fat
+    };
+    
+    const existingProfile = localStorage.getItem('userProfile');
+    const updatedProfile = existingProfile 
+      ? {...JSON.parse(existingProfile), ...goalsData}
+      : goalsData;
+      
+    localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
     console.log('Goals saved:', data);
+    
+    toast({
+      title: "Objetivos actualizados",
+      description: "Tus objetivos nutricionales han sido actualizados",
+    });
+    
     setIsEditingGoals(false);
   };
   
   const saveReminder = () => {
     console.log('Reminder saved:', reminderText);
     form.setValue('reminder', reminderText);
+    
+    const existingProfile = localStorage.getItem('userProfile');
+    const updatedProfile = existingProfile 
+      ? {...JSON.parse(existingProfile), reminder: reminderText}
+      : {reminder: reminderText};
+      
+    localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+    
+    toast({
+      title: "Recordatorio guardado",
+      description: "Tu recordatorio ha sido guardado correctamente",
+    });
+    
     setReminderText('');
   };
 
+  const updatePreferences = (key: keyof Preferences, value: boolean) => {
+    const newPreferences = {...preferences, [key]: value};
+    setPreferences(newPreferences);
+    localStorage.setItem('userPreferences', JSON.stringify(newPreferences));
+  };
+
   return (
-    <div className="min-h-screen bg-background pb-16 md:pb-0 md:pt-16">
+    <div className="min-h-screen bg-background pb-16 md:pb-0 md:pt-16 dark:bg-gray-900">
       <AppNavbar />
       
       <div className="max-w-screen-lg mx-auto px-4 py-6">
@@ -119,22 +245,22 @@ const ProfilePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <div className="md:col-span-1">
             {!isEditingProfile ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6 dark:bg-gray-800 dark:border-gray-700">
                 <div className="flex flex-col items-center">
-                  <div className="w-20 h-20 md:w-24 md:h-24 bg-secondary rounded-full flex items-center justify-center mb-4">
+                  <div className="w-20 h-20 md:w-24 md:h-24 bg-secondary rounded-full flex items-center justify-center mb-4 dark:bg-gray-700">
                     <User size={isMobile ? 32 : 40} className="text-muted-foreground" />
                   </div>
                   <h2 className="text-xl font-bold">{watchedValues.nickname}</h2>
                   <p className="text-sm text-muted-foreground mb-4">{watchedValues.email}</p>
                   <button 
-                    className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
                     onClick={() => setIsEditingProfile(true)}
                   >
                     Editar perfil
                   </button>
                 </div>
                 
-                <div className="mt-6 pt-6 border-t border-border">
+                <div className="mt-6 pt-6 border-t border-border dark:border-gray-700">
                   <div className="flex justify-between mb-4">
                     <span className="text-muted-foreground">Edad</span>
                     <span className="font-medium">{watchedValues.age} años</span>
@@ -154,7 +280,7 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6 dark:bg-gray-800 dark:border-gray-700">
                 <h2 className="text-xl font-bold mb-4">Editar Perfil</h2>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(saveProfile)} className="space-y-4">
@@ -165,7 +291,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Apodo</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -178,7 +304,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input {...field} type="email" />
+                            <Input {...field} type="email" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -191,7 +317,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Edad</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" />
+                            <Input {...field} type="number" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -204,7 +330,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Altura ({preferences.metricUnits ? 'cm' : 'in'})</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" />
+                            <Input {...field} type="number" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -217,7 +343,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Peso ({preferences.metricUnits ? 'kg' : 'lb'})</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" />
+                            <Input {...field} type="number" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -229,9 +355,23 @@ const ProfilePage = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Objetivo</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
+                                <SelectValue placeholder="Selecciona un objetivo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="dark:bg-gray-800">
+                              {WEIGHT_GOALS.map((goal) => (
+                                <SelectItem key={goal.value} value={goal.value}>
+                                  {goal.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormItem>
                       )}
                     />
@@ -240,14 +380,14 @@ const ProfilePage = () => {
                       <Button 
                         type="button" 
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
                         onClick={() => setIsEditingProfile(false)}
                       >
                         Cancelar
                       </Button>
                       <Button 
                         type="submit"
-                        className="flex-1"
+                        className="flex-1 dark:bg-gray-700 dark:hover:bg-gray-600"
                       >
                         Guardar
                       </Button>
@@ -260,12 +400,12 @@ const ProfilePage = () => {
           
           <div className="md:col-span-2 space-y-4 md:space-y-6">
             {!isEditingGoals ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6 dark:bg-gray-800 dark:border-gray-700">
                 <div className="flex items-start mb-4">
                   <Activity className="mr-2 flex-shrink-0" />
                   <div>
                     <h3 className="font-medium">Objetivos diarios</h3>
-                    <p className="text-sm text-muted-foreground">Configura tus metas nutricionales</p>
+                    <p className="text-sm text-muted-foreground">Según tu perfil: {watchedValues.goal}</p>
                   </div>
                 </div>
                 
@@ -275,8 +415,8 @@ const ProfilePage = () => {
                       <span className="text-sm">Calorías</span>
                       <span className="text-sm font-medium">{watchedValues.dailyCalories} kcal</span>
                     </div>
-                    <div className="h-2 bg-secondary rounded-full">
-                      <div className="h-full bg-black rounded-full" style={{ width: `${calorieProgress}%` }}></div>
+                    <div className="h-2 bg-secondary rounded-full dark:bg-gray-700">
+                      <div className="h-full bg-black rounded-full dark:bg-gray-400" style={{ width: `${calorieProgress}%` }}></div>
                     </div>
                   </div>
                   
@@ -285,8 +425,8 @@ const ProfilePage = () => {
                       <span className="text-sm">Proteínas</span>
                       <span className="text-sm font-medium">{watchedValues.protein} g</span>
                     </div>
-                    <div className="h-2 bg-secondary rounded-full">
-                      <div className="h-full bg-black rounded-full" style={{ width: `${proteinProgress}%` }}></div>
+                    <div className="h-2 bg-secondary rounded-full dark:bg-gray-700">
+                      <div className="h-full bg-black rounded-full dark:bg-gray-400" style={{ width: `${proteinProgress}%` }}></div>
                     </div>
                   </div>
                   
@@ -295,8 +435,8 @@ const ProfilePage = () => {
                       <span className="text-sm">Carbohidratos</span>
                       <span className="text-sm font-medium">{watchedValues.carbs} g</span>
                     </div>
-                    <div className="h-2 bg-secondary rounded-full">
-                      <div className="h-full bg-black rounded-full" style={{ width: `${carbsProgress}%` }}></div>
+                    <div className="h-2 bg-secondary rounded-full dark:bg-gray-700">
+                      <div className="h-full bg-black rounded-full dark:bg-gray-400" style={{ width: `${carbsProgress}%` }}></div>
                     </div>
                   </div>
                   
@@ -305,21 +445,21 @@ const ProfilePage = () => {
                       <span className="text-sm">Grasas</span>
                       <span className="text-sm font-medium">{watchedValues.fat} g</span>
                     </div>
-                    <div className="h-2 bg-secondary rounded-full">
-                      <div className="h-full bg-black rounded-full" style={{ width: `${fatProgress}%` }}></div>
+                    <div className="h-2 bg-secondary rounded-full dark:bg-gray-700">
+                      <div className="h-full bg-black rounded-full dark:bg-gray-400" style={{ width: `${fatProgress}%` }}></div>
                     </div>
                   </div>
                 </div>
                 
                 <button 
-                  className="w-full mt-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                  className="w-full mt-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
                   onClick={() => setIsEditingGoals(true)}
                 >
                   Ajustar objetivos
                 </button>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6 dark:bg-gray-800 dark:border-gray-700">
                 <h3 className="text-xl font-bold mb-4">Ajustar Objetivos</h3>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(saveGoals)} className="space-y-4">
@@ -330,7 +470,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Calorías diarias (kcal)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" />
+                            <Input {...field} type="number" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -343,7 +483,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Proteínas (g)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" />
+                            <Input {...field} type="number" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -356,7 +496,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Carbohidratos (g)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" />
+                            <Input {...field} type="number" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -369,7 +509,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Grasas (g)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" />
+                            <Input {...field} type="number" className="dark:bg-gray-700 dark:border-gray-600" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -379,14 +519,14 @@ const ProfilePage = () => {
                       <Button 
                         type="button" 
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
                         onClick={() => setIsEditingGoals(false)}
                       >
                         Cancelar
                       </Button>
                       <Button 
                         type="submit"
-                        className="flex-1"
+                        className="flex-1 dark:bg-gray-700 dark:hover:bg-gray-600"
                       >
                         Guardar
                       </Button>
@@ -396,7 +536,7 @@ const ProfilePage = () => {
               </div>
             )}
             
-            <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-start mb-4">
                 <Settings className="mr-2 flex-shrink-0" />
                 <div>
@@ -406,15 +546,16 @@ const ProfilePage = () => {
               </div>
               
               <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-border">
+                <div className="flex justify-between items-center py-2 border-b border-border dark:border-gray-700">
                   <span>Notificaciones</span>
                   <Switch 
                     checked={preferences.notifications} 
-                    onCheckedChange={(checked) => setPreferences({...preferences, notifications: checked})}
+                    onCheckedChange={(checked) => updatePreferences('notifications', checked)}
+                    className="dark:bg-gray-700"
                   />
                 </div>
                 
-                <div className="flex justify-between items-center py-2 border-b border-border">
+                <div className="flex justify-between items-center py-2 border-b border-border dark:border-gray-700">
                   <div className="flex items-center">
                     <span className="mr-2">Tema oscuro</span>
                     {preferences.darkMode ? 
@@ -425,14 +566,16 @@ const ProfilePage = () => {
                   <Switch 
                     checked={preferences.darkMode} 
                     onCheckedChange={toggleDarkMode}
+                    className="dark:bg-gray-700"
                   />
                 </div>
                 
-                <div className="flex justify-between items-center py-2 border-b border-border">
+                <div className="flex justify-between items-center py-2 border-b border-border dark:border-gray-700">
                   <span>Unidades métricas</span>
                   <Switch 
                     checked={preferences.metricUnits} 
-                    onCheckedChange={(checked) => setPreferences({...preferences, metricUnits: checked})}
+                    onCheckedChange={(checked) => updatePreferences('metricUnits', checked)}
+                    className="dark:bg-gray-700"
                   />
                 </div>
                 
@@ -440,13 +583,14 @@ const ProfilePage = () => {
                   <span>Recordatorios</span>
                   <Switch 
                     checked={preferences.reminders} 
-                    onCheckedChange={(checked) => setPreferences({...preferences, reminders: checked})}
+                    onCheckedChange={(checked) => updatePreferences('reminders', checked)}
+                    className="dark:bg-gray-700"
                   />
                 </div>
               </div>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-start mb-4">
                 <Bell className="mr-2 flex-shrink-0" />
                 <div>
@@ -457,7 +601,7 @@ const ProfilePage = () => {
               
               <div className="space-y-4">
                 {watchedValues.reminder && (
-                  <div className="bg-accent/50 p-3 rounded-lg">
+                  <div className="bg-accent/50 p-3 rounded-lg dark:bg-gray-700">
                     <p className="font-medium text-sm">Recordatorio actual:</p>
                     <p className="text-sm mt-1">{watchedValues.reminder}</p>
                   </div>
@@ -472,11 +616,12 @@ const ProfilePage = () => {
                     value={reminderText}
                     onChange={(e) => setReminderText(e.target.value)}
                     placeholder="Ej: Beber 8 vasos de agua al día"
+                    className="dark:bg-gray-700 dark:border-gray-600"
                   />
                   <Button 
                     onClick={saveReminder}
                     disabled={!reminderText}
-                    className="w-full mt-2"
+                    className="w-full mt-2 dark:bg-gray-700 dark:hover:bg-gray-600"
                   >
                     Guardar recordatorio
                   </Button>
@@ -484,7 +629,7 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-border p-4 md:p-6 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-start mb-4">
                 <Clock className="mr-2 flex-shrink-0" />
                 <div>
@@ -494,7 +639,7 @@ const ProfilePage = () => {
               </div>
               
               <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-border">
+                <div className="flex justify-between items-center py-2 border-b border-border dark:border-gray-700">
                   <div>
                     <p className="font-medium">Alimento añadido</p>
                     <p className="text-xs text-muted-foreground">Añadiste "Ensalada de pollo"</p>
@@ -502,7 +647,7 @@ const ProfilePage = () => {
                   <span className="text-xs text-muted-foreground">Hoy, 13:45</span>
                 </div>
                 
-                <div className="flex justify-between items-center py-2 border-b border-border">
+                <div className="flex justify-between items-center py-2 border-b border-border dark:border-gray-700">
                   <div>
                     <p className="font-medium">Objetivo actualizado</p>
                     <p className="text-xs text-muted-foreground">Cambiaste tu objetivo de calorías a 2000</p>
