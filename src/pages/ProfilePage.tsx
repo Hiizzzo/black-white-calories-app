@@ -26,6 +26,7 @@ interface UserProfile {
   height: string;
   weight: string;
   goal: string;
+  activityLevel: string;
   dailyCalories: string;
   protein: string;
   carbs: string;
@@ -44,6 +45,14 @@ const WEIGHT_GOALS = [
   { value: 'Mantener peso', label: 'Mantener peso' },
   { value: 'Bajar peso', label: 'Bajar peso' },
   { value: 'Subir peso', label: 'Subir peso' },
+];
+
+const ACTIVITY_LEVELS = [
+  { value: 'sedentary', label: 'Sedentario (poco o nada de ejercicio)', multiplier: 1.2 },
+  { value: 'light', label: 'Actividad ligera (ejercicio 1-3 días/semana)', multiplier: 1.375 },
+  { value: 'moderate', label: 'Actividad moderada (ejercicio 3-5 días/semana)', multiplier: 1.55 },
+  { value: 'active', label: 'Muy activo (deporte intenso 6-7 días/semana)', multiplier: 1.725 },
+  { value: 'veryActive', label: 'Extremadamente activo (dos entrenamientos diarios)', multiplier: 1.9 },
 ];
 
 const ProfilePage = () => {
@@ -67,6 +76,7 @@ const ProfilePage = () => {
       height: '175',
       weight: '70',
       goal: 'Mantener peso',
+      activityLevel: 'sedentary',
       dailyCalories: '2000',
       protein: '120',
       carbs: '240',
@@ -85,18 +95,25 @@ const ProfilePage = () => {
   const fatProgress = 90;
 
   // Calculate recommended calorie intake based on personal data and goal
-  const calculateCalorieIntake = (age: number, weight: number, height: number, goal: string) => {
+  const calculateCalorieIntake = (age: number, weight: number, height: number, goal: string, activityLevel: string) => {
     // Harris-Benedict formula for BMR calculation
-    const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    const bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
+    
+    // Find the activity multiplier
+    const activityInfo = ACTIVITY_LEVELS.find(level => level.value === activityLevel);
+    const activityMultiplier = activityInfo ? activityInfo.multiplier : 1.2; // Default to sedentary if not found
+    
+    // Multiply BMR by activity level to get TDEE (Total Daily Energy Expenditure)
+    const tdee = Math.round(bmr * activityMultiplier);
     
     // Adjust based on goal
     let dailyCalories;
     if (goal === 'Bajar peso') {
-      dailyCalories = Math.round(bmr * 0.85); // 15% deficit for weight loss
+      dailyCalories = Math.round(tdee * 0.85); // 15% deficit for weight loss
     } else if (goal === 'Subir peso') {
-      dailyCalories = Math.round(bmr * 1.15); // 15% surplus for weight gain
+      dailyCalories = Math.round(tdee * 1.15); // 15% surplus for weight gain
     } else {
-      dailyCalories = Math.round(bmr); // Maintenance
+      dailyCalories = tdee; // Maintenance
     }
     
     // Calculate macros based on standard distributions
@@ -112,20 +129,21 @@ const ProfilePage = () => {
     };
   };
 
-  // Update macros when weight, height, age or goal changes
+  // Update macros when weight, height, age, goal or activity level changes
   useEffect(() => {
     const age = parseInt(watchedValues.age) || 25;
     const weight = parseInt(watchedValues.weight) || 70;
     const height = parseInt(watchedValues.height) || 170;
     const goal = watchedValues.goal;
+    const activityLevel = watchedValues.activityLevel;
     
-    const { dailyCalories, protein, carbs, fat } = calculateCalorieIntake(age, weight, height, goal);
+    const { dailyCalories, protein, carbs, fat } = calculateCalorieIntake(age, weight, height, goal, activityLevel);
     
     setValue('dailyCalories', dailyCalories.toString());
     setValue('protein', protein.toString());
     setValue('carbs', carbs.toString());
     setValue('fat', fat.toString());
-  }, [watchedValues.age, watchedValues.weight, watchedValues.height, watchedValues.goal, setValue]);
+  }, [watchedValues.age, watchedValues.weight, watchedValues.height, watchedValues.goal, watchedValues.activityLevel, setValue]);
 
   // Load user profile from localStorage
   useEffect(() => {
@@ -171,7 +189,8 @@ const ProfilePage = () => {
       age: data.age,
       height: data.height,
       weight: data.weight,
-      goal: data.goal
+      goal: data.goal,
+      activityLevel: data.activityLevel
     };
     
     localStorage.setItem('userProfile', JSON.stringify(profileData));
@@ -235,6 +254,12 @@ const ProfilePage = () => {
     localStorage.setItem('userPreferences', JSON.stringify(newPreferences));
   };
 
+  // Get activity level label from value
+  const getActivityLevelLabel = (value: string) => {
+    const activityLevel = ACTIVITY_LEVELS.find(level => level.value === value);
+    return activityLevel ? activityLevel.label : 'Sedentario';
+  };
+
   return (
     <div className="min-h-screen bg-background pb-16 md:pb-0 md:pt-16 dark:bg-gray-900">
       <AppNavbar />
@@ -273,9 +298,13 @@ const ProfilePage = () => {
                     <span className="text-muted-foreground">Peso</span>
                     <span className="font-medium">{watchedValues.weight} {preferences.metricUnits ? 'kg' : 'lb'}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between mb-4">
                     <span className="text-muted-foreground">Objetivo</span>
                     <span className="font-medium">{watchedValues.goal}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Actividad física</span>
+                    <span className="font-medium">{getActivityLevelLabel(watchedValues.activityLevel).split(" ")[0]}</span>
                   </div>
                 </div>
               </div>
@@ -368,6 +397,33 @@ const ProfilePage = () => {
                               {WEIGHT_GOALS.map((goal) => (
                                 <SelectItem key={goal.value} value={goal.value}>
                                   {goal.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="activityLevel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nivel de actividad</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
+                                <SelectValue placeholder="Selecciona tu nivel de actividad" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="dark:bg-gray-800">
+                              {ACTIVITY_LEVELS.map((level) => (
+                                <SelectItem key={level.value} value={level.value}>
+                                  {level.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>

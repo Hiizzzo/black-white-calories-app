@@ -5,7 +5,7 @@ import CalorieCard from '@/components/CalorieCard';
 import FoodItem from '@/components/FoodItem';
 import AddFoodForm from '@/components/AddFoodForm';
 import MacroSummary from '@/components/MacroSummary';
-import { Camera, PieChart, ScrollText, Search, Info, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { Info, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 interface Food {
@@ -22,6 +22,14 @@ interface WeightChange {
   direction: 'gain' | 'loss' | 'maintain';
 }
 
+const ACTIVITY_LEVELS = [
+  { value: 'sedentary', multiplier: 1.2 },
+  { value: 'light', multiplier: 1.375 },
+  { value: 'moderate', multiplier: 1.55 },
+  { value: 'active', multiplier: 1.725 },
+  { value: 'veryActive', multiplier: 1.9 },
+];
+
 const Index = () => {
   const { toast } = useToast();
   const [foods, setFoods] = useState<Food[]>([
@@ -33,7 +41,8 @@ const Index = () => {
     weight: 70, // Default weight in kg
     height: 175, // Default height in cm
     age: 28, // Default age
-    goal: 'Mantener peso' // Default goal
+    goal: 'Mantener peso', // Default goal
+    activityLevel: 'sedentary' // Default activity level
   });
   const [weightChange, setWeightChange] = useState<WeightChange>({
     weightChange: 0,
@@ -42,16 +51,23 @@ const Index = () => {
 
   // Calculate daily calorie goal based on user profile
   const calculateDailyCalorieGoal = () => {
-    // Basal Metabolic Rate (BMR) using Mifflin-St Jeor Equation
-    const bmr = 10 * userProfile.weight + 6.25 * userProfile.height - 5 * userProfile.age + 5;
+    // Harris-Benedict formula for BMR (Basal Metabolic Rate)
+    const bmr = 66 + (13.7 * userProfile.weight) + (5 * userProfile.height) - (6.8 * userProfile.age);
+    
+    // Find activity multiplier
+    const activityInfo = ACTIVITY_LEVELS.find(level => level.value === userProfile.activityLevel);
+    const activityMultiplier = activityInfo ? activityInfo.multiplier : 1.2; // Default to sedentary
+    
+    // Calculate TDEE (Total Daily Energy Expenditure)
+    const tdee = bmr * activityMultiplier;
     
     // Adjust based on goal
     if (userProfile.goal === 'Bajar peso') {
-      return Math.round(bmr * 0.85); // 15% deficit for weight loss
+      return Math.round(tdee * 0.85); // 15% deficit for weight loss
     } else if (userProfile.goal === 'Subir peso') {
-      return Math.round(bmr * 1.15); // 15% surplus for weight gain
+      return Math.round(tdee * 1.15); // 15% surplus for weight gain
     } else {
-      return Math.round(bmr); // Maintenance
+      return Math.round(tdee); // Maintenance
     }
   };
 
@@ -107,34 +123,6 @@ const Index = () => {
     toast({
       title: "Alimento eliminado",
       description: "El alimento ha sido eliminado de tu lista",
-    });
-  };
-
-  const handlePhotoCapture = () => {
-    toast({
-      title: "Función en desarrollo",
-      description: "La función de captura de fotos estará disponible próximamente",
-    });
-  };
-
-  const handleSearch = () => {
-    toast({
-      title: "Función en desarrollo",
-      description: "La búsqueda avanzada estará disponible próximamente",
-    });
-  };
-
-  const handleFoodList = () => {
-    toast({
-      title: "Lista de alimentos",
-      description: "Próximamente podrás ver la lista completa de alimentos disponibles",
-    });
-  };
-
-  const handleStats = () => {
-    toast({
-      title: "Estadísticas",
-      description: "Próximamente podrás ver estadísticas detalladas de tu consumo",
     });
   };
 
@@ -196,63 +184,31 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <MacroSummary protein={60} carbs={150} fat={70} />
           
-          <div className="md:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-border dark:bg-gray-800">
-            <h3 className="font-medium mb-4">Métodos de registro rápido</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <button 
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-border hover:bg-accent transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
-                onClick={handlePhotoCapture}
-              >
-                <Camera className="h-5 w-5 mb-2" />
-                <span className="text-xs">Tomar foto</span>
-              </button>
-              <button 
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-border hover:bg-accent transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
-                onClick={handleSearch}
-              >
-                <Search className="h-5 w-5 mb-2" />
-                <span className="text-xs">Buscar</span>
-              </button>
-              <button 
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-border hover:bg-accent transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
-                onClick={handleFoodList}
-              >
-                <ScrollText className="h-5 w-5 mb-2" />
-                <span className="text-xs">Lista de alimentos</span>
-              </button>
-              <button 
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-border hover:bg-accent transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
-                onClick={handleStats}
-              >
-                <PieChart className="h-5 w-5 mb-2" />
-                <span className="text-xs">Estadísticas</span>
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden dark:bg-gray-800">
-          <div className="p-5 pb-2">
-            <h3 className="font-medium mb-2">Alimentos de hoy</h3>
-          </div>
-          <div className="max-h-80 overflow-y-auto">
-            {foods.length > 0 ? (
-              foods.map((food) => (
-                <FoodItem 
-                  key={food.id}
-                  name={food.name}
-                  calories={food.calories}
-                  weight={food.weight}
-                  time={food.time}
-                  onDelete={() => handleDeleteFood(food.id)}
-                />
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
-                <Info className="h-6 w-6 mb-2" />
-                <p>No hay alimentos registrados hoy</p>
+          <div className="md:col-span-2">
+            <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden dark:bg-gray-800">
+              <div className="p-5 pb-2">
+                <h3 className="font-medium mb-2">Alimentos de hoy</h3>
               </div>
-            )}
+              <div className="max-h-80 overflow-y-auto">
+                {foods.length > 0 ? (
+                  foods.map((food) => (
+                    <FoodItem 
+                      key={food.id}
+                      name={food.name}
+                      calories={food.calories}
+                      weight={food.weight}
+                      time={food.time}
+                      onDelete={() => handleDeleteFood(food.id)}
+                    />
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
+                    <Info className="h-6 w-6 mb-2" />
+                    <p>No hay alimentos registrados hoy</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
         
