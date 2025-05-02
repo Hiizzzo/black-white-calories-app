@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { calculateCalories, findFoodByName } from '@/utils/foodDatabase';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface AddFoodFormProps {
   onAddFood: (food: { name: string, calories: number, weight: number, imageUrl?: string }) => void;
@@ -57,8 +57,6 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
     }
   };
 
-  const nameInitial = currentFood?.name.charAt(0).toUpperCase() || '';
-
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
       {!isExpanded ? (
@@ -76,30 +74,15 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
               <label htmlFor="food-name" className="block text-sm font-medium mb-1">
                 Alimento
               </label>
-              <div className="flex items-center gap-3">
-                {name && (
-                  <Avatar className="h-10 w-10 border-[3px] border-black bg-white rounded-full overflow-hidden shadow-[2px_2px_0px_#000]">
-                    {currentFood?.imageUrl ? (
-                      <AvatarImage 
-                        src={currentFood.imageUrl} 
-                        alt={currentFood.name}
-                        className="grayscale contrast-[1.5] brightness-110 p-0.5 transform-gpu hover:scale-110 transition-transform"
-                      />
-                    ) : (
-                      <AvatarFallback className="bg-white text-black font-bold">{nameInitial}</AvatarFallback>
-                    )}
-                  </Avatar>
-                )}
-                <Input
-                  id="food-name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full"
-                  placeholder="Ej: Manzana"
-                  required
-                />
-              </div>
+              <Input
+                id="food-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full"
+                placeholder="Ej: Manzana"
+                required
+              />
               {name && !isFoodFound && weight && (
                 <p className="text-xs text-destructive mt-1">
                   Alimento no encontrado en la base de datos

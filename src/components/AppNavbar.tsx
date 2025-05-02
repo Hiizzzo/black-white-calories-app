@@ -2,10 +2,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Calendar, User } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const AppNavbar = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
+  const isMobile = useIsMobile();
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -27,7 +29,7 @@ const AppNavbar = () => {
   return (
     <nav 
       className={`fixed bottom-0 left-0 right-0 z-50 py-2 px-4 md:px-6 transition-all duration-200 bg-background
-        md:top-0 md:bottom-auto ${isScrolled ? 'md:shadow-md' : ''}`}
+        md:top-0 md:bottom-auto ${isScrolled ? 'md:shadow-md' : ''} ${isMobile ? 'shadow-[0_-2px_10px_rgba(0,0,0,0.1)]' : ''}`}
     >
       <div className="flex justify-between items-center max-w-screen-lg mx-auto">
         <Link to="/" className="hidden md:flex items-center space-x-2">
