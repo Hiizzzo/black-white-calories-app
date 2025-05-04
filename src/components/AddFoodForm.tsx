@@ -1,64 +1,123 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { calculateCalories, findFoodByName } from '@/utils/foodDatabase';
+import { useToast } from "@/hooks/use-toast";
 
 interface AddFoodFormProps {
   onAddFood: (food: { name: string, calories: number, weight: number, imageUrl?: string }) => void;
 }
 
+interface FoodData {
+  nombreDetectado: string;
+  caloriasPor100g: number;
+  gramos: number;
+  caloriasTotales: string;
+}
+
 const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
+  const { toast } = useToast();
   const [name, setName] = useState('');
   const [weight, setWeight] = useState('');
   const [calculatedCalories, setCalculatedCalories] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isFoodFound, setIsFoodFound] = useState(false);
-  const [currentFood, setCurrentFood] = useState<{ name: string; imageUrl?: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [foundFoodName, setFoundFoodName] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
-  useEffect(() => {
-    if (name) {
-      const foundFood = findFoodByName(name);
-      setCurrentFood(foundFood);
-      
-      if (foundFood && weight) {
-        const calories = calculateCalories(name, Number(weight));
-        setCalculatedCalories(calories);
-        setIsFoodFound(!!calories);
-      } else {
-        setCalculatedCalories(null);
-        setIsFoodFound(false);
+  const obtenerCalorias = async (nombreAlimento: string, gramosConsumidos: number): Promise<FoodData | string> => {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(nombreAlimento)}&search_simple=1&action=process&json=1`;
+  
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+  
+      // Asegurarse de que hay resultados
+      if (!data.products || data.products.length === 0) {
+        return `No se encontró información para "${nombreAlimento}".`;
       }
-    } else {
-      setCurrentFood(null);
-      setCalculatedCalories(null);
-      setIsFoodFound(false);
+  
+      // Tomamos el primer resultado que tenga calorías registradas
+      const productoConCalorias = data.products.find(p => p.nutriments && p.nutriments['energy-kcal_100g']);
+  
+      if (!productoConCalorias) {
+        return `No se encontraron calorías para "${nombreAlimento}".`;
+      }
+  
+      const kcalPor100g = productoConCalorias.nutriments['energy-kcal_100g'];
+      const kcalTotales = (kcalPor100g * gramosConsumidos) / 100;
+  
+      return {
+        nombreDetectado: productoConCalorias.product_name || nombreAlimento,
+        caloriasPor100g: kcalPor100g,
+        gramos: gramosConsumidos,
+        caloriasTotales: kcalTotales.toFixed(2)
+      };
+    } catch (error) {
+      console.error('Error al obtener calorías:', error);
+      return 'Ocurrió un error al buscar los datos.';
     }
-  }, [name, weight]);
+  };
+
+  const handleSearch = async () => {
+    if (!name || !weight) return;
+    
+    setIsSearching(true);
+    setIsLoading(true);
+    
+    try {
+      const result = await obtenerCalorias(name, Number(weight));
+      
+      if (typeof result === 'string') {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result,
+        });
+        setCalculatedCalories(null);
+        setFoundFoodName(null);
+      } else {
+        setCalculatedCalories(parseFloat(result.caloriasTotales));
+        setFoundFoodName(result.nombreDetectado);
+        toast({
+          title: "Alimento encontrado",
+          description: `${result.nombreDetectado}: ${result.caloriasPor100g} kcal/100g`,
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Ocurrió un error al buscar los datos.",
+      });
+      setCalculatedCalories(null);
+      setFoundFoodName(null);
+    } finally {
+      setIsLoading(false);
+      setIsSearching(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && Number(weight) > 0 && calculatedCalories !== null) {
-      const foundFood = findFoodByName(name);
-      
       onAddFood({
-        name: foundFood?.name || name.trim(),
+        name: foundFoodName || name.trim(),
         calories: calculatedCalories,
         weight: Number(weight),
-        imageUrl: foundFood?.imageUrl
       });
       
       setName('');
       setWeight('');
       setCalculatedCalories(null);
       setIsExpanded(false);
-      setCurrentFood(null);
+      setFoundFoodName(null);
     }
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+    <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
       {!isExpanded ? (
         <button 
           className="w-full p-4 flex items-center justify-center text-primary hover:bg-accent transition-colors"
@@ -83,11 +142,6 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
                 placeholder="Ej: Manzana"
                 required
               />
-              {name && !isFoodFound && weight && (
-                <p className="text-xs text-destructive mt-1">
-                  Alimento no encontrado en la base de datos
-                </p>
-              )}
             </div>
             <div>
               <label htmlFor="food-weight" className="block text-sm font-medium mb-1">
@@ -105,9 +159,30 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
               />
             </div>
             
-            {calculatedCalories !== null && isFoodFound && (
-              <div className="bg-accent/50 p-2 rounded-md text-sm">
-                Calorías calculadas: <strong>{calculatedCalories} kcal</strong>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={handleSearch}
+              disabled={isLoading || !name || !weight}
+            >
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                  Buscando...
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <Search size={16} className="mr-2" />
+                  Buscar calorías
+                </div>
+              )}
+            </Button>
+            
+            {calculatedCalories !== null && foundFoodName && (
+              <div className="bg-accent/50 p-3 rounded-md text-sm">
+                <p className="font-medium">{foundFoodName}</p>
+                <p>Calorías calculadas: <strong>{calculatedCalories} kcal</strong></p>
               </div>
             )}
             
@@ -122,7 +197,7 @@ const AddFoodForm = ({ onAddFood }: AddFoodFormProps) => {
               </Button>
               <Button
                 type="submit"
-                disabled={!isFoodFound}
+                disabled={calculatedCalories === null}
                 className="flex-1"
               >
                 Guardar
