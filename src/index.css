@@ -82,7 +82,7 @@
 
 @layer components {
   .calorie-card {
-    @apply bg-white rounded-2xl p-6 shadow-sm border border-border flex flex-col gap-3 dark:bg-gray-800 dark:border-gray-700;
+    @apply bg-card rounded-2xl p-6 shadow-sm border border-border flex flex-col gap-3 dark:bg-gray-800 dark:border-gray-700;
   }
   
   .calorie-value {
@@ -95,5 +95,25 @@
   
   .progress-bar {
     @apply h-full bg-primary rounded-full dark:bg-gray-400;
+  }
+  
+  .swipe-container {
+    @apply overflow-hidden;
+  }
+  
+  /* Animation classes */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideInLeft {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  
+  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
   }
 }

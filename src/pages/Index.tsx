@@ -1,5 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import AppNavbar from '@/components/AppNavbar';
 import CalorieCard from '@/components/CalorieCard';
 import FoodItem from '@/components/FoodItem';
@@ -7,6 +8,7 @@ import AddFoodForm from '@/components/AddFoodForm';
 import MacroSummary from '@/components/MacroSummary';
 import { Info, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useSwipeNavigation } from "@/hooks/use-swipe-navigation";
 
 interface Food {
   id: number;
@@ -32,6 +34,11 @@ const ACTIVITY_LEVELS = [
 
 const Index = () => {
   const { toast } = useToast();
+  const location = useLocation();
+  
+  // Initialize swipe navigation
+  useSwipeNavigation('/');
+  
   const [foods, setFoods] = useState<Food[]>([
     { id: 1, name: 'Huevos revueltos', calories: 210, weight: 140, time: '08:30 AM' },
     { id: 2, name: 'Manzana', calories: 95, weight: 182, time: '10:15 AM' },
@@ -100,16 +107,25 @@ const Index = () => {
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    setFoods([
-      ...foods,
+    // Get stored foods from localStorage or use current state
+    const storedFoods = localStorage.getItem('todayFoods');
+    const currentFoods = storedFoods ? JSON.parse(storedFoods) : foods;
+    
+    const updatedFoods = [
+      ...currentFoods,
       {
         id: Date.now(),
         name: food.name,
         calories: food.calories,
         weight: food.weight,
         time: timeString,
+        imageUrl: food.imageUrl
       }
-    ]);
+    ];
+    
+    setFoods(updatedFoods);
+    // Store in localStorage
+    localStorage.setItem('todayFoods', JSON.stringify(updatedFoods));
 
     toast({
       title: "Alimento añadido",
@@ -118,7 +134,10 @@ const Index = () => {
   };
 
   const handleDeleteFood = (id: number) => {
-    setFoods(foods.filter(food => food.id !== id));
+    const updatedFoods = foods.filter(food => food.id !== id);
+    setFoods(updatedFoods);
+    // Update localStorage
+    localStorage.setItem('todayFoods', JSON.stringify(updatedFoods));
     
     toast({
       title: "Alimento eliminado",
@@ -133,8 +152,22 @@ const Index = () => {
     return <Minus className="h-5 w-5 text-gray-500" />;
   };
 
+  // Page transition animation
+  const pageVariants = {
+    initial: { opacity: 0, x: -100 },
+    in: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: 100 }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <motion.div 
+      className="min-h-screen bg-background"
+      initial="initial"
+      animate="in"
+      exit="exit"
+      variants={pageVariants}
+      transition={{ duration: 0.3 }}
+    >
       <AppNavbar />
       
       <div className="max-w-screen-lg mx-auto px-4 py-8">
@@ -150,7 +183,11 @@ const Index = () => {
             title="Calorías restantes" 
             value={remainingCalories} 
           />
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-border flex flex-col gap-2 dark:bg-gray-800">
+          <motion.div 
+            className="bg-card rounded-2xl p-5 shadow-sm border border-border flex flex-col gap-2 dark:bg-gray-800"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
             <h3 className="text-muted-foreground text-sm font-medium uppercase tracking-wider">Cambio de peso estimado</h3>
             <div className="flex items-center gap-2">
               <div className="text-2xl font-bold text-primary">
@@ -178,14 +215,14 @@ const Index = () => {
                 Basado en tu consumo calórico actual y tu objetivo diario de {dailyCalorieGoal} kcal
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <MacroSummary protein={60} carbs={150} fat={70} />
           
           <div className="md:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden dark:bg-gray-800">
+            <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden dark:bg-gray-800">
               <div className="p-5 pb-2">
                 <h3 className="font-medium mb-2">Alimentos de hoy</h3>
               </div>
@@ -216,7 +253,7 @@ const Index = () => {
           <AddFoodForm onAddFood={handleAddFood} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
